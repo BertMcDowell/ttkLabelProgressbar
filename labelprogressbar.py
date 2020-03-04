@@ -13,6 +13,8 @@ __version__ = "0.1"
 __author__  = "Bert McDowell <bertmcdowell@gmail.com>"
 __all__     = ["LabelProgressbar"]
 
+PERCENTAGE = "%"
+
 class LabelProgressbar(ttk.Frame):
     __inititialized = False
     __style = None
@@ -25,7 +27,20 @@ class LabelProgressbar(ttk.Frame):
             self.__initialize_custom_style()
             LabelProgressbar.__inititialized = True
 
-        ttk.Frame.__init__(self, master, *args)
+        self._value = kwargs.pop('value', 100)
+        self._maximum = kwargs.pop('maximum', 100)
+        self._step = kwargs.pop('step', 1.0)
+
+        self._anchor = kwargs.pop('anchor', CENTER)
+        self._font = kwargs.pop('font', None)
+        self._text = kwargs.pop('text', None)
+
+        if kwargs.pop('orient', HORIZONTAL) == HORIZONTAL:
+            self._orient = HORIZONTAL
+        else:
+            self._orient = VERTICAL
+
+        ttk.Frame.__init__(self, master, *args) #, background='gray', height=20)
 
         self._is_running = False
         self._timer = None
@@ -34,26 +49,15 @@ class LabelProgressbar(ttk.Frame):
         self._intervalDefault = 50 / 1000
         self._interval = self._intervalDefault
 
-        self._frame = ttk.Frame(master=self, relief=RIDGE)
-        self._frame.pack(fill=BOTH, expand=True, pady=2, padx=2)
-
-        self._canvas = Canvas(master=self._frame)
+        self._canvas = Canvas(master=self, height=kwargs.pop('height', 20))
         self._canvas.bind("<Configure>", self._configure)
-        self._canvas.pack(fill=BOTH, expand=True, pady=2, padx=2)
+        self._canvas.pack(fill=BOTH, expand=True, pady=1, padx=1)
 
-        self._bar = self._canvas.create_rectangle(0, 0, 100, 40, fill = "lightgray")
-        self._label = self._canvas.create_text(4, 4, anchor="nw", angle=0)
+        self._bar = self._canvas.create_rectangle(0, 0, 40, 40, fill = "lightgray")
+        self._label = self._canvas.create_text(4, 4, font=self._font, anchor=self._anchor)
 
-        self._value = kwargs.pop('value', 100)
-        self._maximum = kwargs.pop('maximum', 100)
-        self._step = kwargs.pop('step', 1.0)
-        self._text = kwargs.pop('text', '%')
-
-        if kwargs.pop('orient', HORIZONTAL) == HORIZONTAL:
-            self._orient = HORIZONTAL
-        else:
-            self._orient = VERTICAL
-
+        self._width = -1
+        self._height = -1
         self._updateText()
 
     def _getProgress(self):
@@ -62,24 +66,26 @@ class LabelProgressbar(ttk.Frame):
     def _updateBar(self):
         progress = self._getProgress()
         if self._orient == HORIZONTAL:
-            self._canvas.coords(self._bar, 2, 2, (self._canvas.winfo_width() - 3) * progress, self._canvas.winfo_height() - 3)
+            self._canvas.coords(self._bar, 2, 2, self._width * progress, self._height)
         else: 
-            self._canvas.coords(self._bar, 2, 2, self._canvas.winfo_width() - 3, (self._canvas.winfo_height() - 3) * progress)
+            self._canvas.coords(self._bar, 2, + 2 + (self._height - (self._height * progress)), self._width, self._height)
 
     def _updateLabel(self):
         if self._orient == HORIZONTAL:
-            self._canvas.coords(self._label, (self._canvas.winfo_height() - 3) * 0.5, (self._canvas.winfo_height() - 3) * 0.5)
+            self._canvas.coords(self._label, self._width * 0.5, self._height * 0.5)
             self._canvas.itemconfig(self._label, angle=0)
         else: 
-            self._canvas.coords(self._label, (self._canvas.winfo_height() - 3) * 0.5, (self._canvas.winfo_height() - 3) * 0.5)
+            self._canvas.coords(self._label, self._width * 0.5, self._height * 0.5)
             self._canvas.itemconfig(self._label, angle=90)
 
     def _updateText(self):
-        if self._text == '%':
+        if self._text == PERCENTAGE:
             self._canvas.itemconfig(self._label, text='{:03d}%'.format(int(self._getProgress() * 100)))
             self._updateLabel()
 
     def _configure(self, event):
+        self._width = self._canvas.winfo_width() - 3
+        self._height = self._canvas.winfo_height() - 3
         self._updateBar()
         self._updateLabel()
 
@@ -151,8 +157,8 @@ def _test():
 
     root=Tk()
     root.title("Example")
-    progressbar=LabelProgressbar(root)
-    progressbar.pack(fill=BOTH,expand=True, padx=2, pady=2)
+    progressbar=LabelProgressbar(root,orient=HORIZONTAL,text=PERCENTAGE)
+    progressbar.pack(fill=BOTH, expand=True, padx=2, pady=2)
 
     startbtn = Button(text="Start", width=30, command= lambda progressbar=progressbar: progressbar.start())
     startbtn.pack(side=RIGHT, padx=2)
