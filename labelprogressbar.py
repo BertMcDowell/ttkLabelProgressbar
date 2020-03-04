@@ -27,7 +27,8 @@ class LabelProgressbar(ttk.Frame):
             self.__initialize_custom_style()
             LabelProgressbar.__inititialized = True
 
-        self._value = kwargs.pop('value', 100)
+        self._valueDefault = kwargs.pop('value', 100)
+        self._value = self._valueDefault
         self._maximum = kwargs.pop('maximum', 100)
         self._step = kwargs.pop('step', 1.0)
 
@@ -40,7 +41,7 @@ class LabelProgressbar(ttk.Frame):
         else:
             self._orient = VERTICAL
 
-        ttk.Frame.__init__(self, master, *args) #, background='gray', height=20)
+        ttk.Frame.__init__(self, master, *args)
 
         self._is_running = False
         self._timer = None
@@ -56,6 +57,11 @@ class LabelProgressbar(ttk.Frame):
         self._bar = self._canvas.create_rectangle(0, 0, 40, 40, fill = "lightgray")
         self._label = self._canvas.create_text(4, 4, font=self._font, anchor=self._anchor)
 
+        if self._orient == HORIZONTAL:
+            self._canvas.itemconfig(self._label, angle=0)
+        else: 
+            self._canvas.itemconfig(self._label, angle=90)
+
         self._width = -1
         self._height = -1
         self._updateText()
@@ -68,15 +74,11 @@ class LabelProgressbar(ttk.Frame):
         if self._orient == HORIZONTAL:
             self._canvas.coords(self._bar, 2, 2, self._width * progress, self._height)
         else: 
-            self._canvas.coords(self._bar, 2, + 2 + (self._height - (self._height * progress)), self._width, self._height)
+            self._canvas.coords(self._bar, 2, 2 + (self._height - (self._height * progress)), self._width, self._height)
 
     def _updateLabel(self):
-        if self._orient == HORIZONTAL:
+        if self._anchor == CENTER:
             self._canvas.coords(self._label, self._width * 0.5, self._height * 0.5)
-            self._canvas.itemconfig(self._label, angle=0)
-        else: 
-            self._canvas.coords(self._label, self._width * 0.5, self._height * 0.5)
-            self._canvas.itemconfig(self._label, angle=90)
 
     def _updateText(self):
         if self._text == PERCENTAGE:
@@ -136,8 +138,15 @@ class LabelProgressbar(ttk.Frame):
             except RuntimeError as exception:
                 print(exception)
             self._timer.join(self._interval)
+            self.event_generate("<<ProgressbarStop>>", data={"widget" : self})
         self._interval = self._intervalDefault
         self._timer = None
+
+    def reset(self):
+        self.stop()
+        self._value = self._valueDefault
+        self._updateBar()
+        self._updateText()
 
     def set(self,text):
         self._lock.acquire()
@@ -168,6 +177,9 @@ def _test():
 
     stopbtn = Button(text="Stop", width=30, command= lambda progressbar=progressbar: progressbar.stop())
     stopbtn.pack(side=RIGHT, padx=2)
+
+    resetbtn = Button(text="Reset", width=30, command= lambda progressbar=progressbar: progressbar.reset())
+    resetbtn.pack(side=RIGHT, padx=2)
 
     root.geometry('1080x1080')
     root.mainloop()
