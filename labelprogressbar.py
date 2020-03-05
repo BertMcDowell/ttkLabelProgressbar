@@ -33,6 +33,8 @@ class LabelProgressbar(ttk.Frame):
         self._step = kwargs.pop('step', 1.0)
 
         self._anchor = kwargs.pop('anchor', CENTER)
+        self._justify = kwargs.pop('justify', LEFT)
+        self._indent = kwargs.pop('indent', 6)
         self._font = kwargs.pop('font', None)
         self._text = kwargs.pop('text', None)
 
@@ -55,7 +57,7 @@ class LabelProgressbar(ttk.Frame):
         self._canvas.pack(fill=BOTH, expand=True, pady=1, padx=1)
 
         self._bar = self._canvas.create_rectangle(0, 0, 40, 40, fill = "lightgray")
-        self._label = self._canvas.create_text(4, 4, font=self._font, anchor=self._anchor)
+        self._label = self._canvas.create_text(self._indent, self._indent, font=self._font, anchor=self._anchor, justify=self._justify)
 
         if self._orient == HORIZONTAL:
             self._canvas.itemconfig(self._label, angle=0)
@@ -77,8 +79,18 @@ class LabelProgressbar(ttk.Frame):
             self._canvas.coords(self._bar, 2, 2 + (self._height - (self._height * progress)), self._width, self._height)
 
     def _updateLabel(self):
-        if self._anchor == CENTER:
-            self._canvas.coords(self._label, self._width * 0.5, self._height * 0.5)
+        x = self._width * 0.5
+        y = self._height * 0.5
+        if self._anchor != CENTER:
+            if 'n' in self._anchor:
+                y = self._indent
+            elif 's' in self._anchor:
+                y = self._height - self._indent
+            if 'w' in self._anchor:
+                x = self._indent
+            elif 'e' in self._anchor:
+                x = self._width - self._indent    
+        self._canvas.coords(self._label, x, y)
 
     def _updateText(self):
         if self._text == PERCENTAGE:
@@ -166,7 +178,7 @@ def _test():
 
     root=Tk()
     root.title("Example")
-    progressbar=LabelProgressbar(root,orient=HORIZONTAL,text=PERCENTAGE)
+    progressbar=LabelProgressbar(root,orient=HORIZONTAL,text=PERCENTAGE, anchor=CENTER)
     progressbar.pack(fill=BOTH, expand=True, padx=2, pady=2)
 
     startbtn = Button(text="Start", width=30, command= lambda progressbar=progressbar: progressbar.start())
